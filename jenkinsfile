@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        VM_IP   = '192.168.0.103'   // Apni CentOS VM ka IP yahan likhein
+        VM_IP   = '192.168.0.101'   // Apni CentOS VM ka IP yahan likhein
         VM_USER = 'centos'         // VM ka username
         SSH_KEY = 'centos-vm-ssh'  // Jenkins mein SSH Credential ki ID
     }
