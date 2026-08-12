@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskMaster - 3-Tier Docker Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col items-center p-8">
+    <div class="max-w-xl w-full bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-2xl font-bold text-slate-800 mb-2">3-Tier Task App (Dockerized)</h1>
+        <p class="text-xs text-slate-500 mb-6">Tier 1 (Nginx/Frontend) ➔ Tier 2 (Node.js API) ➔ Tier 3 (PostgreSQL DB)</p>
+
+        <!-- Input Form -->
+        <form id="taskForm" class="flex gap-2 mb-6">
+            <input type="text" id="taskInput" placeholder="Enter a new task..." 
+                   class="flex-1 border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Add Task</button>
+        </form>
+
+        <!-- Task List -->
+        <ul id="taskList" class="divide-y divide-slate-200">
+            <li class="py-3 text-center text-slate-400">Loading tasks from Backend Container...</li>
+        </ul>
+    </div>
+
+    <script>
+        // Nginx reverse proxy /api/ path through backend routing kar raha hai
+        const API_URL = '/api/tasks';
+
+        async function fetchTasks() {
+            try {
+                const res = await fetch(API_URL);
+                const data = await res.json();
+                renderTasks(data);
+            } catch (err) {
+                console.error(err);
+                document.getElementById('taskList').innerHTML = 
+                    `<li class="py-3 text-red-500 text-center">Failed to connect to Backend Container.</li>`;
+            }
+        }
+
+        function renderTasks(tasks) {
+            const list = document.getElementById('taskList');
+            if (!Array.isArray(tasks) || tasks.length === 0) {
+                list.innerHTML = `<li class="py-3 text-center text-slate-400">No tasks found.</li>`;
+                return;
+            }
+            list.innerHTML = tasks.map(task => `
+                <li class="py-3 flex justify-between items-center">
+                    <div>
+                        <span class="font-medium text-slate-700">${task.title}</span>
+                        <span class="text-xs ml-2 px-2 py-0.5 rounded ${task.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">${task.status}</span>
+                    </div>
+                    <button onclick="deleteTask(${task.id})" class="text-red-500 hover:text-red-700 text-sm">Delete</button>
+                </li>
+            `).join('');
+        }
+
+        document.getElementById('taskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('taskInput');
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: input.value })
+                });
+                input.value = '';
+                fetchTasks();
+            } catch (err) {
+                alert('Error adding task');
+            }
+        });
+
+        async function deleteTask(id) {
+            try {
+                await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                fetchTasks();
+            } catch (err) {
+                alert('Error deleting task');
+            }
+        }
+
+        fetchTasks();
+    </script>
+</body>
+</html>

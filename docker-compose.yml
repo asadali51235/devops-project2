@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------------
+  # Tier 1: Presentation Layer (Nginx Web Server)
+  # -------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: taskmaster-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - frontend-net
+    restart: always
+
+  # -------------------------------------------------------------
+  # Tier 2: Application Layer (Node.js REST API)
+  # -------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: taskmaster-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DB_HOST=database
+      - DB_USER=postgres
+      - DB_PASSWORD=secretpassword
+      - DB_NAME=task_db
+      - DB_PORT=5432
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - frontend-net
+      - backend-net
+    restart: always
+
+  # -------------------------------------------------------------
+  # Tier 3: Data Layer (PostgreSQL Database)
+  # -------------------------------------------------------------
+  database:
+    image: postgres:15-alpine
+    container_name: taskmaster-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secretpassword
+      - POSTGRES_DB=task_db
+    volumes:
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d task_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend-net
+    restart: always
+
+# Isolate Networks (Database Direct Internet Par Expose Nahi Hoga)
+networks:
+  frontend-net:
+    driver: bridge
+  backend-net:
+    driver: bridge
+
+# Persist Database Data
+volumes:
+  pgdata:
