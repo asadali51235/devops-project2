@@ -7,7 +7,7 @@ COPY package.json ./
 
 RUN npm install
 
-# Application code copy
+
 COPY . .
 
 EXPOSE 5000
