@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        VM_IP   = '192.168.0.101'   // Apni CentOS VM ka IP yahan likhein
-        VM_USER = 'centos'         // VM ka username
-        SSH_KEY = 'centos-vm-ssh'  // Jenkins mein SSH Credential ki ID
+        VM_IP   = '192.168.0.100'   // CentOS VM IP
+        VM_USER = 'centos'          // VM username
+        SSH_KEY = 'centos-vm-ssh'  // Jenkins SSH Credential ID
     }
 
     stages {
@@ -16,14 +16,27 @@ pipeline {
             }
         }
 
-        // Step 2: Code VM Par Bhejna
+        // Step 2: Code Archive Karke VM Par Bhejna
         stage('2. Send Code to VM') {
             steps {
-                echo 'Files CentOS VM par copy ho rahi hain...'
+                echo 'Files compress karke CentOS VM par copy ho rahi hain...'
                 sshagent([env.SSH_KEY]) {
-                    // VM par folder banana aur files copy karna
-                    sh "ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} 'mkdir -p /home/${VM_USER}/app'"
-                    sh "scp -r -o StrictHostKeyChecking=no ./* ${VM_USER}@${VM_IP}:/home/${VM_USER}/app/"
+                    sh """
+                        # Local workspace par hidden files aur subfolders include karke archive banana
+                        tar --exclude='.git' -czf app.tar.gz .
+
+                        # VM par app folder create karna
+                        ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} "mkdir -p /home/${VM_USER}/app"
+
+                        # Tar archive copy karna
+                        scp -o StrictHostKeyChecking=no app.tar.gz ${VM_USER}@${VM_IP}:/home/${VM_USER}/app/
+
+                        # VM par extract karna aur archive delete karna
+                        ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} "cd /home/${VM_USER}/app && tar -xzf app.tar.gz && rm app.tar.gz"
+
+                        # Local Jenkins workspace ki temp tar file clean karna
+                        rm -f app.tar.gz
+                    """
                 }
             }
         }
