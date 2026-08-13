@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # -------------------------------------------------------------
   # Tier 1: Presentation Layer (Nginx Web Server)
@@ -64,13 +62,11 @@ services:
       - backend-net
     restart: always
 
-# Isolate Networks (Database Direct Internet Par Expose Nahi Hoga)
 networks:
   frontend-net:
     driver: bridge
   backend-net:
     driver: bridge
 
-# Persist Database Data
 volumes:
   pgdata:
